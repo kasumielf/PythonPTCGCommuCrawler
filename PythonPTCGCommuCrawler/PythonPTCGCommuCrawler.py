@@ -1,9 +1,12 @@
 import os
+import daemon
 import time
 import threading
 import datetime
 import crawling.Crawling as Crawling
+
 from models.Article import Article
+from daemon.pidfile import PIDLockFile
 
 loop = False
 url = 'https://cafe.naver.com/ArticleList.nhn?search.clubid=19480246&search.menuid=24'
@@ -56,10 +59,17 @@ def printThread():
 def cls():
     os.system('cls' if os.name=='nt' else 'clear')
 
-wt = threading.Thread(name = "workThread", target = workThread)
-pt = threading.Thread(name = "printThread", target = printThread)
+pidLockfile = PIDLockFile('.pid')
 
-loop = True
+if pidLockfile.is_locked():
+    print("running already (pid: %d)" % pidLockfile.read_pid())
+    exit(1)
 
-wt.start()
-pt.start()
+with daemon.DaemonContext(pidfile=pidLockfile):
+    wt = threading.Thread(name = "workThread", target = workThread)
+    pt = threading.Thread(name = "printThread", target = printThread)
+
+    loop = True
+
+    wt.start()
+    pt.start()
